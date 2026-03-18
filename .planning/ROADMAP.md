@@ -44,7 +44,7 @@ Plans:
   2. The nono binary is accessible inside the container at the expected container-internal path — observable by running `ls` at that path from inside the container
   3. Per-container state directory exists under `/var/run/nono-nri/{podID}/{containerID}/` while the container is running and is removed after the container is deleted — observable on the host node filesystem
   4. Containers not in the designated RuntimeClass start normally with unmodified process.args — confirming the opt-in gate holds under Phase 2 injection code
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 02-01-PLAN.md — BuildAdjustment (SetArgs + AddMount) and state management (WriteMetadata/RemoveMetadata) with full unit tests
@@ -70,5 +70,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. NRI Foundation | 3/3 | Complete   | 2026-03-18 |
-| 2. Command Wrapping | 0/3 | Planning complete | - |
+| 2. Command Wrapping | 1/3 | In Progress|  |
 | 3. Deployment | 0/? | Not started | - |
