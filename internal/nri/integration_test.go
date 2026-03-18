@@ -351,8 +351,8 @@ var _ = Describe("End-to-end injection lifecycle", func() {
 
 		// Verify mount is present and correct
 		Expect(adj.Mounts).To(HaveLen(1))
-		Expect(adj.Mounts[0].Source).To(Equal("/host/bin/nono"))
-		Expect(adj.Mounts[0].Destination).To(Equal("/nono/nono"))
+		Expect(adj.Mounts[0].Source).To(Equal("/host/bin"))
+		Expect(adj.Mounts[0].Destination).To(Equal("/nono"))
 		Expect(adj.Mounts[0].Type).To(Equal("bind"))
 		Expect(adj.Mounts[0].Options).To(ContainElements("bind", "ro", "rprivate"))
 
