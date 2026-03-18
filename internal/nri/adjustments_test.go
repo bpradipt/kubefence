@@ -30,14 +30,16 @@ var _ = Describe("BuildAdjustment", func() {
 	)
 
 	Describe("readonly bind mount", func() {
-		It("adds exactly one mount with correct fields and options", func() {
+		It("mounts the host directory to /nono so binary is accessible at /nono/nono", func() {
 			ctr := &api.Container{Id: "ctr-3", Args: []string{"cmd"}}
 			adj := nri.BuildAdjustment(ctr, "strict", "/usr/local/bin/nono")
 
 			Expect(adj.Mounts).To(HaveLen(1))
 			m := adj.Mounts[0]
-			Expect(m.Source).To(Equal("/usr/local/bin/nono"))
-			Expect(m.Destination).To(Equal(nri.ContainerNonoPath))
+			// Source is the directory containing the binary (filepath.Dir of hostBinPath)
+			Expect(m.Source).To(Equal("/usr/local/bin"))
+			// Destination is /nono (directory mount, so /nono/nono is accessible)
+			Expect(m.Destination).To(Equal("/nono"))
 			Expect(m.Type).To(Equal("bind"))
 			Expect(m.Options).To(ContainElements("bind", "ro", "rprivate"))
 		})

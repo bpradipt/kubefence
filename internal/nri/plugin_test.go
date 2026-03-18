@@ -138,7 +138,7 @@ var _ = Describe("Plugin", func() {
 			adj, _, _ := p.CreateContainer(context.Background(), pod, ctr)
 			Expect(adj).NotTo(BeNil())
 			Expect(adj.Mounts).To(HaveLen(1))
-			Expect(adj.Mounts[0].Destination).To(Equal(nri.ContainerNonoPath))
+			Expect(adj.Mounts[0].Destination).To(Equal("/nono"))
 		})
 
 		It("uses default profile when annotation absent", func() {
