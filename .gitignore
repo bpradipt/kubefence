@@ -1,0 +1,6 @@
+.planning/
+
+# Binaries
+/cmd/nono-nri/nono-nri
+/10-nono-nri
+*.exe
