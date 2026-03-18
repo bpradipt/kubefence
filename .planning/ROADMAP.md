@@ -60,7 +60,7 @@ Plans:
   2. A test pod using the sandboxed RuntimeClass starts successfully and its entrypoint runs under Landlock — observable by the nono process appearing in container process tree and sandboxing taking effect on filesystem access
   3. The nono binary is present on the host at the expected hostPath after DaemonSet init container runs — observable via `ls` on the node or via `kubectl exec` on the DaemonSet pod
   4. Plugin binary placed in CRI-O's nri_plugin_dir with the two-digit index prefix is auto-started by CRI-O without requiring DaemonSet registration — observable in CRI-O logs showing plugin connected
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 03-01-PLAN.md — Kubernetes manifests (DaemonSet, RuntimeClass, test pod) + runtime config snippets (CRI-O, containerd) + example TOML
@@ -76,4 +76,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. NRI Foundation | 3/3 | Complete   | 2026-03-18 |
 | 2. Command Wrapping | 3/3 | Complete   | 2026-03-18 |
-| 3. Deployment | 1/3 | In Progress|  |
+| 3. Deployment | 2/3 | In Progress|  |
