@@ -125,8 +125,12 @@ PLUGIN_PHASE=$(kubectl get pod "$PLUGIN_POD" -n kube-system \
 check_contains "plugin pod is Running" "$PLUGIN_PHASE" "Running"
 
 PLUGIN_LOGS=$(kubectl logs -n kube-system "$PLUGIN_POD" 2>/dev/null || echo "")
-# CRI-O appears as "cri-o" in the log; containerd as "containerd"
-RUNTIME_PATTERN="${RUNTIME/crio/cri-o}"
+# CRI-O appears as "cri-o" in the log; containerd as "containerd" or "v2"
+case "$RUNTIME" in
+  crio)       RUNTIME_PATTERN="cri-o" ;;
+  containerd) RUNTIME_PATTERN="containerd\|v2" ;;
+  *)          RUNTIME_PATTERN="$RUNTIME" ;;
+esac
 check_contains "plugin connected to $RUNTIME runtime" "$PLUGIN_LOGS" "$RUNTIME_PATTERN"
 
 echo ""
@@ -169,10 +173,15 @@ PLUGIN_LOGS=$(kubectl logs -n kube-system "$PLUGIN_POD" 2>/dev/null || echo "")
 check_contains "plugin logged 'injected' for sandboxed pod" \
   "$PLUGIN_LOGS" '"pod":"nono-e2e-sandboxed"'
 
-# Get container ID from kubectl — unique per run, works while pod is running
-CTR_ID=$(kubectl get pod nono-e2e-sandboxed \
-  -o jsonpath='{.status.containerStatuses[0].containerID}' 2>/dev/null | \
-  sed 's|cri-o://||g' | sed 's|containerd://||g' | tr -d '[:space:]')
+# Get container ID from kubectl — retry since containerID may not be populated immediately
+CTR_ID=""
+for _ in 1 2 3 4 5; do
+  CTR_ID=$(kubectl get pod nono-e2e-sandboxed \
+    -o jsonpath='{.status.containerStatuses[0].containerID}' 2>/dev/null | \
+    sed 's|cri-o://||g' | sed 's|containerd://||g' | tr -d '[:space:]')
+  [[ -n "$CTR_ID" ]] && break
+  sleep 1
+done
 
 if [[ -n "$CTR_ID" ]]; then
   if [[ "$RUNTIME" == "containerd" ]]; then
@@ -185,7 +194,7 @@ if [[ -n "$CTR_ID" ]]; then
   OCI_ARGS=$(docker exec "$NODE" python3 -c \
     "import json; d=json.load(open('${BUNDLE}')); print(d['process']['args'][0])" \
     2>/dev/null || echo "")
-  check_contains "OCI bundle process.args[0] == '/nono/nono'" \
+  check_contains "OCI bundle process.args[0] == '/nono/nono' (SetArgs applied)" \
     "$OCI_ARGS" "/nono/nono"
 
   OCI_SEP=$(docker exec "$NODE" python3 -c \
@@ -197,7 +206,7 @@ if [[ -n "$CTR_ID" ]]; then
   OCI_MOUNT=$(docker exec "$NODE" python3 -c \
     "import json; d=json.load(open('${BUNDLE}')); m=[x for x in d.get('mounts',[]) if x.get('destination')=='/nono']; print('ok' if m else '')" \
     2>/dev/null || echo "")
-  check_contains "OCI bundle has /nono bind mount" "$OCI_MOUNT" "ok"
+  check_contains "OCI bundle has /nono bind mount (AddMount applied)" "$OCI_MOUNT" "ok"
 fi
 
 # Check state metadata (alpine-compatible: grep only)
@@ -256,7 +265,7 @@ echo ""
 echo "── Test 4: State dir cleanup on pod deletion ────────────────────────────"
 
 kubectl delete pod nono-e2e-sandboxed --wait=true &>/dev/null
-sleep 5
+sleep 10
 
 # Check by container ID — more reliable than pod name (ignores old runs)
 if [[ -n "$CTR_ID" ]]; then
@@ -268,7 +277,7 @@ if [[ -n "$CTR_ID" ]]; then
     pass "state dir for container removed after pod deletion"
   else
     # Known limitation: CRI-O may not deliver RemoveContainer events in all scenarios
-    fail "state dir for container removed after pod deletion (known CRI-O NRI issue)"
+    fail "state dir for container removed after pod deletion"
   fi
 else
   pass "state dir cleanup (skipped — no CTR_ID captured)"
