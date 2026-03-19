@@ -40,3 +40,11 @@ internal/log/        # slog setup
 - `ContainerAdjustment.SetArgs()` to wrap process.args — no OCI hooks
 - nono binary bind-mounted from host into container (works for Kata via virtiofs)
 - Kernel check (5.13+ for Landlock) runs before anything else in main()
+- State dir cleanup uses `StopContainer` (direct gRPC RPC, reliable) not
+  `RemoveContainer` (StateChange notification, not delivered by containerd 2.x
+  to external socket-connected plugins)
+
+## Agent Reference
+
+See `AGENTS.md` for the full technical reference: file map, data flows,
+NRI event delivery constraints, testing patterns, and invariants.
