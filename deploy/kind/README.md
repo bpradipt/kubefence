@@ -12,34 +12,47 @@ Two cluster configurations are provided — one for each supported container run
 
 ## Supported Configurations
 
-| Runtime | Image | SetArgs support | Notes |
-|---------|-------|-----------------|-------|
-| CRI-O 1.35+ | `quay.io/confidential-containers/kind-crio:v1.35.2` | ✓ | Full injection working |
-| containerd 2.2.0+ | `kindest/node:v1.32.3` (ships containerd 2.0.3) | ✗ (2.0.x) | SetArgs fixed in containerd 2.2.0 |
+| Runtime | Kind node image | containerd/CRI-O version | SetArgs support |
+|---------|----------------|--------------------------|-----------------|
+| containerd | `kindest/node:v1.35.1` | containerd 2.2.1 | ✓ |
+| CRI-O | `quay.io/confidential-containers/kind-crio:v1.35.2` | CRI-O 1.35 | ✓ |
 
-> **Note on SetArgs:** `ContainerAdjustment.SetArgs()` is implemented in the NRI spec but was
-> not applied in containerd ≤ 2.0.x or CRI-O ≤ 1.29.x due to a missing `AdjustArgs()` call in
-> their vendored NRI runtime-tools library. CRI-O 1.35+ and containerd 2.2.0+ have the fix.
+> **Note on SetArgs:** `ContainerAdjustment.SetArgs()` requires containerd ≥ 2.2.0 or
+> CRI-O ≥ 1.35. Earlier versions had a missing `AdjustArgs()` call in their vendored
+> NRI runtime-tools library and silently ignored args modifications.
 
 ## Deploy
 
-### CRI-O (recommended)
+### Using Make (recommended)
 
 ```bash
+# containerd (default)
+make kind-e2e
+
+# CRI-O
+make kind-e2e RUNTIME=crio
+
+# Deploy only (keep cluster running for manual inspection)
+make kind-up
+make kind-up RUNTIME=crio
+
+# Run tests against an existing cluster
+make kind-test
+
+# Tear down
+make kind-down
+make kind-down RUNTIME=crio
+```
+
+### Using the script directly
+
+```bash
+# containerd
+RUNTIME=containerd bash deploy/kind/deploy.sh
+
+# CRI-O
 RUNTIME=crio bash deploy/kind/deploy.sh
 ```
-
-This creates a cluster named `nono-crio` using `quay.io/confidential-containers/kind-crio:v1.35.2`.
-A local Docker registry is started for image loading into CRI-O.
-
-### containerd
-
-```bash
-RUNTIME=containerd bash deploy/kind/deploy.sh
-```
-
-This creates a cluster named `nono-containerd` using `kindest/node:v1.32.3`.
-Image loading uses `ctr import` directly (workaround for `kind load docker-image` bug with containerd v2.x).
 
 ### Environment variables
 
@@ -48,19 +61,25 @@ Image loading uses `ctr import` directly (workaround for `kind load docker-image
 | `RUNTIME` | `containerd` | `containerd` or `crio` |
 | `CLUSTER_NAME` | `nono-<runtime>` | Kind cluster name |
 | `IMAGE` | `nono-nri:latest` | Plugin image tag |
+| `KATA` | `false` | Install Kata Containers (`true`/`false`) |
+| `REGISTRY_NAME` | `nono-nri-registry` | Local registry container name (crio only) |
+| `REGISTRY_PORT` | `5100` | Local registry port on the host (crio only) |
 
 ## Run E2E Tests
 
-After deploying with `deploy.sh`, run the 16-test e2e suite:
+After deploying with `deploy.sh` or `make kind-up`:
 
 ```bash
+# containerd
+make kind-test
+# or
+RUNTIME=containerd CLUSTER_NAME=nono-containerd bash deploy/kind/e2e.sh
+
 # CRI-O
+make kind-test RUNTIME=crio
+# or
 RUNTIME=crio CLUSTER_NAME=nono-crio \
   REGISTRY_NAME=nono-nri-registry REGISTRY_PORT=5100 \
-  bash deploy/kind/e2e.sh
-
-# containerd
-RUNTIME=containerd CLUSTER_NAME=nono-containerd \
   bash deploy/kind/e2e.sh
 ```
 
@@ -69,22 +88,24 @@ RUNTIME=containerd CLUSTER_NAME=nono-containerd \
 | Test | What it verifies |
 |------|-----------------|
 | 1. Plugin connectivity | DaemonSet running, plugin registered with runtime |
-| 2. Sandboxed pod injection | `process.args` modified, `/nono/nono` accessible, OCI bundle, state dir |
+| 2. Sandboxed pod injection | `process.args` modified, `/nono/nono` accessible, OCI bundle args + mount, state dir written |
 | 3. Non-sandboxed isolation | Non-sandboxed pods unaffected, no `/nono` mount |
 | 4. State dir cleanup | State dir removed on pod deletion (`RemoveContainer`) |
+| 5. Kata + nono | nono injection inside a QEMU/KVM micro-VM (skipped when `KATA=false`) |
 
-### Expected Results by Runtime
+### Expected Results
 
-| Test | CRI-O 1.35 | containerd 2.0.3 |
-|------|-----------|-----------------|
+| Test | containerd 2.2.1 | CRI-O 1.35 |
+|------|-----------------|------------|
 | Plugin connectivity | ✓ | ✓ |
-| process.args modified | ✓ | ✓ (nono exec'd via arg[0]) |
+| process.args modified | ✓ | ✓ |
 | /nono/nono accessible | ✓ | ✓ |
-| OCI bundle process.args | ✓ | **✗** (SetArgs not applied, runtime limitation) |
+| OCI bundle process.args | ✓ | ✓ |
 | OCI bind mount | ✓ | ✓ |
 | State dir metadata | ✓ | ✓ |
 | Non-sandboxed isolation | ✓ | ✓ |
 | State dir cleanup | ✓ | ✓ |
+| Kata + nono | skipped (KATA=false) | skipped (KATA=false) |
 
 ## Verify Manually
 
@@ -107,10 +128,13 @@ kubectl exec nono-test -- ls -la /nono/nono
 ## Cleanup
 
 ```bash
+# containerd
+make kind-down
+# or: kind delete cluster --name nono-containerd
+
 # CRI-O
+make kind-down RUNTIME=crio
+# or:
 kind delete cluster --name nono-crio
 docker rm -f nono-nri-registry
-
-# containerd
-kind delete cluster --name nono-containerd
 ```
