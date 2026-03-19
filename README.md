@@ -77,11 +77,16 @@ make docker-build    # outputs nono-nri:latest
 ### Quick start with Kind
 
 ```bash
-# CRI-O (full SetArgs support)
-RUNTIME=crio bash deploy/kind/deploy.sh
+# containerd (default)
+make kind-e2e
 
-# containerd 2.2+
-RUNTIME=containerd bash deploy/kind/deploy.sh
+# CRI-O
+make kind-e2e RUNTIME=crio
+
+# Deploy only, keep cluster alive for manual testing
+make kind-up
+make kind-test   # run e2e suite against the running cluster
+make kind-down   # tear down
 ```
 
 See [`deploy/kind/README.md`](deploy/kind/README.md) for full Kind deployment docs.
@@ -178,16 +183,35 @@ nono_bin_path = "/opt/nono-nri/nono"
 socket_path = ""
 ```
 
+## CI
+
+| Workflow | Trigger | What it does |
+|----------|---------|-------------|
+| `lint` | push/PR to main | `gofmt`, `go vet`, `go mod tidy`, `go test -race` |
+| `release` | GitHub release published | Downloads nono binary, builds and pushes `ghcr.io/<org>/nono-nri` to GHCR |
+
+The nono version embedded in the image is controlled by `NONO_VERSION` in
+[`.github/workflows/release.yaml`](.github/workflows/release.yaml). Update that
+value and publish a new release (or trigger `workflow_dispatch`) to ship a
+fresh image with a newer nono.
+
 ## E2E Tests
 
 ```bash
-RUNTIME=crio       CLUSTER_NAME=nono-crio       bash deploy/kind/e2e.sh
-RUNTIME=containerd CLUSTER_NAME=nono-containerd bash deploy/kind/e2e.sh
+# Full cycle (deploy + test + teardown)
+make kind-e2e
+make kind-e2e RUNTIME=crio
+
+# Test against an existing cluster
+make kind-test
 ```
 
 ## Project Layout
 
 ```
+.github/workflows/
+  lint.yaml            # CI: gofmt, vet, mod tidy, unit tests
+  release.yaml         # CD: build + push image to GHCR on release
 cmd/nono-nri/          # plugin entrypoint (main.go)
 internal/nri/
   plugin.go            # CreateContainer / RemoveContainer handlers
@@ -201,10 +225,11 @@ internal/log/          # slog JSON handler factory
 deploy/
   daemonset.yaml       # Kubernetes DaemonSet (plugin + init container)
   runtimeclass.yaml    # RuntimeClass: nono-sandbox / handler: nono-runc
+  runtimeclass-kata.yaml  # RuntimeClass: kata-nono-sandbox / handler: kata-qemu
   test-pod.yaml        # Sample sandboxed pod for verification
   crio-nri.conf        # CRI-O NRI config snippet
   containerd-config.toml  # containerd NRI config snippet
-  kind/                # Kind cluster configs and scripts
+  kind/                # Kind cluster configs, deploy.sh, e2e.sh
 ```
 
 ## License

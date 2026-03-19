@@ -1,8 +1,9 @@
 # nono-nri plugin configuration
 # Install as: /etc/nri/conf.d/10-nono-nri.toml
 #
-# runtime_classes: list of RuntimeClass metadata.name values to intercept.
-#   Pods with runtimeClassName matching any entry get nono injection.
+# runtime_classes: list of RuntimeClass *handler* names to intercept
+#   (matches pod.GetRuntimeHandler(), not metadata.name).
+#   Pods whose RuntimeClass handler matches any entry get nono injection.
 #   All other pods are skipped (no-op).
 #
 # default_profile: nono profile used when pod lacks nono.sh/profile annotation.
