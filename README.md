@@ -52,7 +52,7 @@ PID 1:    /usr/bin/myapp --flag   (nono exec'd in and vanished)
 | Linux kernel | 5.13+ (Landlock LSM) |
 | CRI-O | 1.35+ (NRI with `AdjustArgs` support) |
 | containerd | 2.2.0+ (NRI with `AdjustArgs` support) |
-| Go | 1.23+ |
+| Go | 1.24+ |
 | nono binary | [nono releases](https://nono.sh) — place at `./nono` before building |
 
 > **Note:** The nono binary is dynamically linked against glibc (`libdbus-1`). Workload containers
@@ -183,6 +183,9 @@ nono_bin_path = "/opt/nono-nri/nono"
 socket_path = ""
 ```
 
+The `nono.sh/profile` annotation value is validated against `^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$`.
+Invalid values are silently ignored and fall back to `default_profile`.
+
 ## CI
 
 | Workflow | Trigger | What it does |
@@ -190,16 +193,17 @@ socket_path = ""
 | `lint` | push/PR to main | `gofmt`, `go vet`, `go mod tidy`, `go test -race` |
 | `release` | GitHub release published | Downloads nono binary, builds and pushes `ghcr.io/<org>/nono-nri` to GHCR |
 
-The nono version embedded in the image is controlled by `NONO_VERSION` in
-[`.github/workflows/release.yaml`](.github/workflows/release.yaml). Update that
-value and publish a new release (or trigger `workflow_dispatch`) to ship a
-fresh image with a newer nono.
+The nono version embedded in the image is controlled by `NONO_VERSION` and
+`NONO_SHA256` in [`.github/workflows/release.yaml`](.github/workflows/release.yaml).
+Both values must be updated together when bumping the pinned nono release. The
+SHA256 is verified against the extracted binary before the image is built.
 
 ## E2E Tests
 
 ```bash
 # Full cycle (deploy + test + teardown)
-make kind-e2e
+make kind-e2e                    # 17 checks (runc only)
+make kind-e2e KATA=true          # 20 checks (runc + Kata Containers)
 make kind-e2e RUNTIME=crio
 
 # Test against an existing cluster
