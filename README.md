@@ -8,6 +8,18 @@ The plugin intercepts container creation, prepends `nono wrap` to the container'
 via `ContainerAdjustment.SetArgs()`, and bind-mounts the nono binary into the container — working
 uniformly for both runc and Kata Containers runtimes with no changes required to container images.
 
+## Demo
+
+**python-dev** — automated Job showing Landlock filesystem isolation (non-interactive):
+
+![python-dev sandbox demo](contrib/python-dev/python-demo.gif)
+
+**node-dev** — manual exec into baseline vs sandboxed pod (interactive):
+
+![node-dev sandbox demo](contrib/node-dev/node-demo.gif)
+
+See [`contrib/`](contrib/) for manifests, Dockerfiles, and full demo scripts.
+
 ## How It Works
 
 1. A pod is created with `runtimeClassName: nono-sandbox`
