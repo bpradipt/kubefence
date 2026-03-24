@@ -154,7 +154,7 @@ var _ = Describe("Plugin", func() {
 	})
 
 	Describe("RemoveContainer", func() {
-		It("returns nil updates and nil error", func() {
+		It("returns nil error and logs container-removed with required fields", func() {
 			cfg := &nri.Config{
 				RuntimeClasses: []string{"nono-runc"},
 				DefaultProfile: "default",
@@ -163,6 +163,7 @@ var _ = Describe("Plugin", func() {
 			p := nri.NewPlugin(cfg, newBufLogger(buf))
 
 			pod := &api.PodSandbox{
+				Uid:       "pod-uid-rem-1",
 				Name:      "test-pod",
 				Namespace: "default",
 			}
@@ -170,6 +171,42 @@ var _ = Describe("Plugin", func() {
 
 			err := p.RemoveContainer(context.Background(), pod, ctr)
 			Expect(err).NotTo(HaveOccurred())
+
+			var entry logEntry
+			Expect(json.Unmarshal(buf.Bytes(), &entry)).To(Succeed())
+			Expect(entry.Msg).To(Equal("container-removed"))
+			Expect(entry.ContainerID).To(Equal("ctr-rem"))
+			Expect(entry.Pod).To(Equal("test-pod"))
+			Expect(entry.Namespace).To(Equal("default"))
+		})
+	})
+
+	Describe("StopContainer", func() {
+		It("returns nil updates and nil error and logs container-stopping with required fields", func() {
+			cfg := &nri.Config{
+				RuntimeClasses: []string{"nono-runc"},
+				DefaultProfile: "default",
+			}
+			buf := &bytes.Buffer{}
+			p := nri.NewPlugin(cfg, newBufLogger(buf))
+
+			pod := &api.PodSandbox{
+				Uid:       "pod-uid-stop-1",
+				Name:      "test-pod",
+				Namespace: "default",
+			}
+			ctr := &api.Container{Id: "ctr-stop"}
+
+			updates, err := p.StopContainer(context.Background(), pod, ctr)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updates).To(BeNil())
+
+			var entry logEntry
+			Expect(json.Unmarshal(buf.Bytes(), &entry)).To(Succeed())
+			Expect(entry.Msg).To(Equal("container-stopping"))
+			Expect(entry.ContainerID).To(Equal("ctr-stop"))
+			Expect(entry.Pod).To(Equal("test-pod"))
+			Expect(entry.Namespace).To(Equal("default"))
 		})
 	})
 })
