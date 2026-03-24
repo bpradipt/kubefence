@@ -13,6 +13,11 @@ const ContainerNonoPath = "/nono/nono"
 // containerNonoDirPath is the directory bind-mounted into the container.
 // Mounting the directory (not the file) ensures the destination path is
 // created by the OCI runtime even when it doesn't pre-exist in the rootfs.
+//
+// Invariant: no container image used with nono-nri should define its own
+// /nono directory for a different purpose. If a container image already has
+// /nono, this bind-mount will silently shadow it. This is an accepted
+// constraint of the current design.
 const containerNonoDirPath = "/nono"
 
 // BuildAdjustment constructs a ContainerAdjustment that:
