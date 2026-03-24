@@ -16,19 +16,6 @@ const StateBaseDir = "/var/run/nono-nri"
 // It defaults to StateBaseDir and can be overridden in tests via SetStateBaseDir.
 var stateBaseDir = StateBaseDir
 
-// SetStateBaseDir overrides the base directory used for state files.
-// For use in tests only. Must only be called before the plugin processes any
-// container events; it is not goroutine-safe.
-func SetStateBaseDir(dir string) {
-	stateBaseDir = dir
-}
-
-// ResetStateBaseDir restores the base directory to the default StateBaseDir.
-// For use in tests only.
-func ResetStateBaseDir() {
-	stateBaseDir = StateBaseDir
-}
-
 // ContainerMetadata holds the per-container metadata written to metadata.json.
 type ContainerMetadata struct {
 	ContainerID string `json:"container_id"`

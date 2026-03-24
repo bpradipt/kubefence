@@ -62,14 +62,3 @@ func defaultKernelVersion() (major, minor int) {
 	return
 }
 
-// SetKernelVersionFunc overrides the kernel version detection for testing.
-// Must only be called before the plugin processes any container events;
-// it is not goroutine-safe.
-func SetKernelVersionFunc(fn func() (int, int)) {
-	kernelVersionFn = fn
-}
-
-// ResetKernelVersionFunc restores the default kernel version detection.
-func ResetKernelVersionFunc() {
-	kernelVersionFn = defaultKernelVersion
-}
