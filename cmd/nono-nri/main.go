@@ -39,8 +39,15 @@ func run() error {
 		return fmt.Errorf("loading config: %w", err)
 	}
 
-	if _, err := os.Stat(cfg.NonoBinPath); err != nil {
+	info, err := os.Stat(cfg.NonoBinPath)
+	if err != nil {
 		return fmt.Errorf("nono binary not found at %s: %w", cfg.NonoBinPath, err)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("nono binary at %s is not a regular file", cfg.NonoBinPath)
+	}
+	if info.Mode()&0o111 == 0 {
+		return fmt.Errorf("nono binary at %s is not executable", cfg.NonoBinPath)
 	}
 
 	logger := applog.New(jsonMode, level)
