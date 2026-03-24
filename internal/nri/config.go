@@ -35,11 +35,3 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	return &cfg, nil
 }
-
-// DefaultConfig returns a Config with sensible defaults.
-func DefaultConfig() *Config {
-	return &Config{
-		DefaultProfile: "default",
-		SocketPath:     "/var/run/nri/nri.sock",
-	}
-}
