@@ -8,6 +8,10 @@ import (
 )
 
 var _ = Describe("kernelMinorParsing", func() {
+	AfterEach(func() {
+		nri.ResetKernelVersionFunc()
+	})
+
 	// These cases exercise the real defaultKernelVersion parser indirectly by
 	// checking that CheckKernel succeeds on the live host; exotic string formats
 	// are validated via the injected function to keep tests hermetic.
