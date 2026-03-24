@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"unsafe"
 )
 
 const (
@@ -41,11 +42,9 @@ func defaultKernelVersion() (major, minor int) {
 	if err := syscall.Uname(&uname); err != nil {
 		return 0, 0
 	}
-	// uname.Release is [65]int8 on linux/amd64 — convert element-by-element.
-	rel := make([]byte, len(uname.Release))
-	for i, c := range uname.Release {
-		rel[i] = byte(c)
-	}
+	// uname.Release is [65]int8 on amd64 and [65]byte on arm64. Reinterpret the
+	// array as raw bytes via unsafe.Slice to avoid sign-extension on amd64.
+	rel := unsafe.Slice((*byte)(unsafe.Pointer(&uname.Release[0])), len(uname.Release))
 	releaseStr := strings.TrimRight(string(rel), "\x00")
 	parts := strings.SplitN(releaseStr, ".", 3)
 	if len(parts) < 2 {
