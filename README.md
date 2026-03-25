@@ -64,17 +64,13 @@ binary. No local build is required to try it out.
 | CRI-O | 1.35+ (NRI with `AdjustArgs` support) |
 | containerd | 2.2.0+ (NRI with `AdjustArgs` support) |
 | Go | 1.24+ |
-| nono binary | [nono releases](https://nono.sh) — place at `./nono` before building |
-
-> **Note:** The nono binary is dynamically linked against glibc (`libdbus-1`). Workload containers
-> must have glibc available (ubuntu/debian-based images). Alpine and musl-based images cannot run
-> the nono binary.
+| nono binary | built from source via `make nono-build` (glibc, no libdbus/libsystemd) |
 
 ## Build
 
 ```bash
-# Place the nono binary at the repo root first
-ls ./nono
+# Build the nono binary from source (requires rustup)
+make nono-build      # outputs ./nono (glibc, no libdbus/libsystemd)
 
 # Build the plugin binary
 make build           # outputs ./10-nono-nri
@@ -253,13 +249,12 @@ Invalid values are silently ignored and fall back to `default_profile`.
 | Workflow | Trigger | What it does |
 |----------|---------|-------------|
 | `lint` | push/PR to main | `gofmt`, `go vet`, `go mod tidy`, `go test -race` |
-| `release` | GitHub release published | Downloads nono binary, builds and pushes `ghcr.io/bpradipt/kubefence` to GHCR |
+| `release` | GitHub release published | Builds static nono from source, builds and pushes `ghcr.io/bpradipt/kubefence` to GHCR |
 | `kata-kernel` | weekly + `workflow_dispatch` + release | Builds a kata guest kernel with `CONFIG_SECURITY_LANDLOCK=y` and pushes `ghcr.io/bpradipt/kata-kernel-landlock:<kata-version>` to GHCR |
 
-The nono version embedded in the image is controlled by `NONO_VERSION` and
-`NONO_SHA256` in [`.github/workflows/release.yaml`](.github/workflows/release.yaml).
-Both values must be updated together when bumping the pinned nono release. The
-SHA256 is verified against the extracted binary before the image is built.
+The nono version built from source is controlled by `NONO_VERSION` in
+[`.github/workflows/release.yaml`](.github/workflows/release.yaml).
+Update this value when bumping the pinned nono release.
 
 ## E2E Tests
 

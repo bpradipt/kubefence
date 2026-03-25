@@ -11,7 +11,8 @@ spec:
   restartPolicy: Never
   containers:
     - name: demo
-      image: nono-kata-demo:latest
+      #image: nono-kata-demo:latest
+      image: nono-demo-python:latest
       imagePullPolicy: IfNotPresent
       # NRI injects nono at container creation time inside the Kata VM:
       #   /nono/nono wrap --profile default -- sleep infinity

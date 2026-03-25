@@ -12,9 +12,9 @@ container creation and wraps the container process with the `nono` Landlock
 sandbox binary. Opt-in is via RuntimeClass: only pods whose RuntimeClass handler
 matches the configured list are wrapped; all others are skipped with zero overhead.
 
-The `nono` binary (pre-built, not compiled here) is copied from the container
-image to the host by a DaemonSet init container, then bind-mounted read-only
-into each sandboxed container at `/nono/nono`.
+The `nono` binary (built from source by `scripts/build-nono.sh`, glibc by default)
+is copied from the container image to the host by a DaemonSet init container,
+then bind-mounted read-only into each sandboxed container at `/nono/nono`.
 
 ---
 
@@ -40,7 +40,10 @@ deploy/runtimeclass.yaml          nono-sandbox RuntimeClass (handler: nono-runc)
 deploy/runtimeclass-kata.yaml     kata-nono-sandbox RuntimeClass (handler: kata-qemu)
 deploy/10-nono-nri.toml.example   Annotated TOML config reference
 Dockerfile                        Multi-stage: golang:1.24-alpine builder → alpine:3.20
-.github/workflows/release.yaml    CI: downloads nono binary, builds + pushes to ghcr.io
+.github/workflows/release.yaml    CI: builds static nono from source, builds + pushes to ghcr.io
+scripts/build-nono.sh             builds nono from always-further/nono source; glibc by default
+                                  (BUILD_TARGET=musl for fully static); patches keyring to drop
+                                  libdbus (sync-secret-service disabled)
 ```
 
 ---
@@ -158,6 +161,9 @@ gofmt -l .
 
 # vet
 go vet ./...
+
+# build static nono from source (requires rustup + musl-tools)
+make nono-build
 
 # docker image (requires ./nono binary in repo root)
 make docker-build IMAGE=nono-nri:latest
@@ -287,8 +293,8 @@ The NRI socket mount is read-only because the plugin connects *to* containerd
 ## Published image
 
 `ghcr.io/bpradipt/kubefence` is built by `.github/workflows/release.yaml`:
-- Downloads `nono` binary from `always-further/nono` releases (`NONO_VERSION`),
-  verifies SHA256 against `NONO_SHA256` before embedding — both must be updated together
+- Builds `nono` from source (`always-further/nono` at `NONO_VERSION`) as a glibc
+  binary (no libdbus/libsystemd) via `scripts/build-nono.sh`
 - Compiles `10-nono-nri` from repo source with `CGO_ENABLED=0`
 - Platform: `linux/amd64` only
 - Logging from NRI SDK internals appears in logrus format

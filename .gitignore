@@ -3,4 +3,6 @@
 # Binaries
 /cmd/nono-nri/nono-nri
 /10-nono-nri
+/nono
+/nono-nri
 *.exe

@@ -38,7 +38,9 @@ internal/log/        # slog setup
 - Container opt-in: RuntimeClass filter only (no namespace denylist)
 - Pause containers excluded naturally via NRI PodSandbox event separation
 - `ContainerAdjustment.SetArgs()` to wrap process.args — no OCI hooks
+- nono binary built from source (glibc by default, BUILD_TARGET=musl for static) — no libdbus/libsystemd
 - nono binary bind-mounted from host into container (works for Kata via virtiofs)
+- `scripts/build-nono.sh` builds nono from source; `make nono-build` is the entry point
 - Kernel check (5.13+ for Landlock) runs before anything else in main()
 - State dir cleanup uses `StopContainer` (direct gRPC RPC, reliable) not
   `RemoveContainer` (StateChange notification, not delivered by containerd 2.x

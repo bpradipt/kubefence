@@ -1,8 +1,8 @@
 BINARY := 10-nono-nri
 CMD := ./cmd/nono-nri
 
-.PHONY: build test test-all clean lint \
-        docker-build docker-load-kind \
+.PHONY: build test test-all clean fmt lint check \
+        nono-build docker-build docker-load-kind \
         kind-up kind-test kind-down kind-e2e
 
 build:
@@ -17,15 +17,40 @@ test-all:
 clean:
 	rm -f $(BINARY)
 
+fmt:
+	@files=$$(gofmt -l .); \
+	if [ -n "$$files" ]; then \
+		echo "The following files are not gofmt'd:"; \
+		echo "$$files"; \
+		echo ""; \
+		echo "Run: gofmt -w ."; \
+		exit 1; \
+	fi
+
 lint:
 	go vet ./...
+
+# check mirrors the full CI lint job: fmt + vet + mod tidy
+check: fmt lint
+	@go mod tidy
+	@if ! git diff --quiet go.mod go.sum; then \
+		echo "go.mod or go.sum is out of sync. Run: go mod tidy"; \
+		git diff go.mod go.sum; \
+		exit 1; \
+	fi
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 IMAGE        ?= nono-nri:latest
 KIND_CLUSTER ?= nono-test
 
+# Build nono from source (glibc by default; BUILD_TARGET=musl for fully static).
+# Requires: rustup. For musl: also apt-get install musl-tools.
+# NONO_VERSION can be set to a git tag (e.g. v0.23.0) or branch.
+nono-build:
+	bash scripts/build-nono.sh
+
 docker-build:
-	@test -f nono || (echo "ERROR: ./nono binary not found in build context. Download from nono releases and place at repo root." && exit 1)
+	@test -f nono || (echo "ERROR: ./nono binary not found. Run 'make nono-build' to build from source." && exit 1)
 	docker build -t $(IMAGE) .
 
 docker-load-kind: docker-build

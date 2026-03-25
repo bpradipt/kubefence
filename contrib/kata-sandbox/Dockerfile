@@ -1,10 +1,6 @@
 # kata-sandbox demo image
 # Uses python:3.12-slim as the base (matches python-dev profile).
-# Adds libdbus-1-3 which the nono binary (dynamically linked) requires.
 FROM python:3.12-slim
-RUN apt-get update -qq && \
-    apt-get install -y -qq --no-install-recommends libdbus-1-3 && \
-    rm -rf /var/lib/apt/lists/*
 
 # Replace /bin/bash with a nono wrapper so that every exec'd shell is
 # automatically sandboxed when /nono/nono is present (bind-mounted by NRI
