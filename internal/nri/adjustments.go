@@ -20,14 +20,20 @@ const ContainerNonoPath = "/nono/nono"
 // constraint of the current design.
 const containerNonoDirPath = "/nono"
 
-// BuildAdjustment constructs a ContainerAdjustment that:
-//  1. Prepends the nono wrapper command prefix to the container's existing args
-//     via SetArgs: [ContainerNonoPath, "wrap", "--profile", profile, "--", <original args...>]
-//  2. Adds a readonly bind mount of the directory containing hostBinPath to
-//     containerNonoDirPath, making the binary accessible at ContainerNonoPath.
+// BuildAdjustment constructs a ContainerAdjustment that wraps the container
+// process with nono. It always prepends the nono wrapper to process.args.
+//
+// Standard delivery (vmRootfs=false): bind-mounts the directory containing
+// hostBinPath into the container at /nono so the binary is accessible at
+// ContainerNonoPath (/nono/nono).
+//
+// VM rootfs delivery (vmRootfs=true): the bind-mount is skipped (nono is
+// pre-installed in the VM guest rootfs at /nono/nono). NONO_PROFILE is
+// injected as an env var so shell wrapper scripts invoked via kubectl exec
+// can pick up the correct profile without a separate config file.
 //
 // It is safe to call with a container that has nil or empty args.
-func BuildAdjustment(ctr *api.Container, profile, hostBinPath string) *api.ContainerAdjustment {
+func BuildAdjustment(ctr *api.Container, profile, hostBinPath string, vmRootfs bool) *api.ContainerAdjustment {
 	prefix := []string{ContainerNonoPath, "wrap", "--profile", profile, "--"}
 	orig := ctr.GetArgs()
 	newArgs := make([]string, 0, len(prefix)+len(orig))
@@ -36,11 +42,16 @@ func BuildAdjustment(ctr *api.Container, profile, hostBinPath string) *api.Conta
 
 	adj := &api.ContainerAdjustment{}
 	adj.SetArgs(newArgs)
-	adj.AddMount(&api.Mount{
-		Source:      filepath.Dir(hostBinPath),
-		Destination: containerNonoDirPath,
-		Type:        "bind",
-		Options:     []string{"bind", "ro", "rprivate"},
-	})
+
+	if vmRootfs {
+		adj.AddEnv("NONO_PROFILE", profile)
+	} else {
+		adj.AddMount(&api.Mount{
+			Source:      filepath.Dir(hostBinPath),
+			Destination: containerNonoDirPath,
+			Type:        "bind",
+			Options:     []string{"bind", "ro", "rprivate"},
+		})
+	}
 	return adj
 }
