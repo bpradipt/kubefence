@@ -24,9 +24,16 @@ echo "==> Extracting ext4 partition (offset $((PART_START_SECTOR * 512)) bytes).
 dd if="$IMAGE" bs=512 skip="$PART_START_SECTOR" count="$PART_SECTORS" \
    of="$PART_IMG" status=none
 
-echo "==> Injecting /nono/nono ..."
+echo "==> Creating /nono directory..."
+# Separated from the subsequent large-file write: combining mkdir and a large
+# write in a single debugfs session corrupts the ext4 partition in some
+# debugfs versions (inode allocation ordering bug).
 debugfs -w "$PART_IMG" 2>/dev/null << DEBUGFS_EOF
 mkdir /nono
+DEBUGFS_EOF
+
+echo "==> Injecting /nono/nono ..."
+debugfs -w "$PART_IMG" 2>/dev/null << DEBUGFS_EOF
 write $NONO /nono/nono
 DEBUGFS_EOF
 
