@@ -12,6 +12,10 @@
 #   SKIP_BUILD      true to skip docker build and pull IMAGE from a registry instead
 #   KATA_VERSION    kata-containers release to install (default: 3.28.0)
 #   KATA_KERNEL_IMAGE  pre-built Landlock kernel image; derived from git remote if unset
+#   KATA_ROOTFS     true to deploy the custom Ubuntu Noble rootfs with nono pre-installed
+#                   (requires KATA=true; enables vm_rootfs_classes in plugin config)
+#   KATA_ROOTFS_IMAGE  pre-built rootfs image; derived from git remote if unset
+#   NONO_VERSION    nono version for local rootfs fallback build (default: v0.23.0)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,6 +32,11 @@ KATA_VERSION="${KATA_VERSION:-3.28.0}"
 # Derived from the git remote owner at runtime; override to use a custom build.
 #   KATA_KERNEL_IMAGE=ghcr.io/yourorg/kata-kernel-landlock:3.28.0
 KATA_KERNEL_IMAGE="${KATA_KERNEL_IMAGE:-}"
+# Custom Ubuntu Noble rootfs with nono pre-installed (published by kata-rootfs-nono GHA workflow).
+# Requires KATA=true. Enables vm_rootfs_classes for the kata-nono-qemu handler.
+KATA_ROOTFS="${KATA_ROOTFS:-false}"
+KATA_ROOTFS_IMAGE="${KATA_ROOTFS_IMAGE:-}"
+NONO_VERSION="${NONO_VERSION:-v0.23.0}"  # used when building the rootfs locally
 SKIP_BUILD="${SKIP_BUILD:-false}"  # set SKIP_BUILD=true to use a pre-built / remote image
 
 # ── Validate runtime ──────────────────────────────────────────────────────────
@@ -309,23 +318,126 @@ if [[ "$KATA" == "true" ]]; then
       sed -i 's|\(\[hypervisor.qemu\]\)|\1\nmachine_accelerators = \"kernel_irqchip=split\"|' '${KATA_CFG}'
   "
   echo "    Kata QEMU config patched (Landlock kernel, kata initrd, kernel_irqchip=split)."
+
+  # ── kata-nono-qemu: custom rootfs with nono pre-installed ────────────────────
+  if [[ "$KATA_ROOTFS" == "true" ]]; then
+    echo ""
+    echo "==> Deploying kata-nono-qemu (embedded nono rootfs)..."
+
+    KATA_ROOTFS_CACHE="/tmp/kata-rootfs-nono-${KATA_VERSION}-${NONO_VERSION}.image"
+
+    if [ -f "${KATA_ROOTFS_CACHE}" ]; then
+      echo "    Using cached rootfs: ${KATA_ROOTFS_CACHE}"
+    else
+      # Resolve image name from git remote owner if not overridden.
+      if [ -z "${KATA_ROOTFS_IMAGE}" ]; then
+        _GH_OWNER=$(git -C "${SCRIPT_DIR}" remote get-url origin 2>/dev/null \
+          | sed -n 's|.*github\.com[:/]\([^/]*\)/.*|\1|p')
+        KATA_ROOTFS_IMAGE="ghcr.io/${_GH_OWNER:-k8s-nono}/kata-rootfs-nono:${KATA_VERSION}-${NONO_VERSION}"
+      fi
+      echo "    Kata rootfs image: ${KATA_ROOTFS_IMAGE}"
+
+      if docker pull "${KATA_ROOTFS_IMAGE}" 2>/dev/null; then
+        _CTR=$(docker create "${KATA_ROOTFS_IMAGE}")
+        docker cp "${_CTR}:/kata-ubuntu-noble.image" "${KATA_ROOTFS_CACHE}"
+        docker rm "${_CTR}" >/dev/null
+        echo "    Rootfs extracted from image."
+      else
+        # Fallback: build locally using inject.sh.
+        echo "    Pre-built image not available — building locally..."
+        apt-get install -qq -y e2tools 2>/dev/null || true
+
+        NONO_TARBALL="nono-${NONO_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+        _NONO_TMP=$(mktemp -d)
+        curl -fsSL "https://github.com/always-further/nono/releases/download/${NONO_VERSION}/${NONO_TARBALL}" \
+          | tar xzf - -C "$_NONO_TMP"
+        _NONO_BIN=$(find "$_NONO_TMP" -maxdepth 3 -name nono -type f | head -1)
+
+        curl -fsSL \
+          "https://github.com/kata-containers/kata-containers/releases/download/${KATA_VERSION}/kata-static-${KATA_VERSION}-amd64.tar.zst" \
+          | zstd -d \
+          | tar --to-stdout -x "./opt/kata/share/kata-containers/kata-ubuntu-noble.image" \
+          > "${KATA_ROOTFS_CACHE}.tmp"
+
+        bash "${SCRIPT_DIR}/kata-rootfs/inject.sh" \
+          "${KATA_ROOTFS_CACHE}.tmp" "$_NONO_BIN"
+        mv "${KATA_ROOTFS_CACHE}.tmp" "${KATA_ROOTFS_CACHE}"
+        rm -rf "$_NONO_TMP"
+        echo "    Local build complete."
+      fi
+    fi
+
+    # Deploy the custom rootfs onto the node.
+    KATA_CUSTOM_ROOTFS="${KATA_SHARE}/kata-ubuntu-noble-nono.image"
+    docker cp "${KATA_ROOTFS_CACHE}" "${NODE}:${KATA_CUSTOM_ROOTFS}"
+    docker exec "$NODE" chmod 644 "${KATA_CUSTOM_ROOTFS}"
+    echo "    Deployed: ${KATA_CUSTOM_ROOTFS}"
+
+    # Create a dedicated kata config for the kata-nono-qemu handler.
+    # Inherits all settings from configuration-qemu.toml (Landlock kernel,
+    # machine_accelerators) but points image = at the custom nono rootfs.
+    # kata-nono-sandbox continues using the standard kata-ubuntu-noble.image.
+    KATA_CFG_NONO="$(dirname ${KATA_CFG})/configuration-kata-nono-qemu.toml"
+    docker exec "$NODE" sh -c "
+      cp '${KATA_CFG}' '${KATA_CFG_NONO}'
+      sed -i 's|^image = .*|image = \"${KATA_CUSTOM_ROOTFS}\"|' '${KATA_CFG_NONO}'
+    "
+    echo "    Created ${KATA_CFG_NONO} with custom rootfs."
+
+    # Register kata-nono-qemu as a containerd runtime handler.
+    # Same shim binary and runtime_type as kata-qemu; different ConfigPath.
+    docker exec "$NODE" sh -c "
+      cat >> /etc/containerd/config.toml << 'CONTAINERD_EOF'
+
+[plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.kata-nono-qemu]
+  runtime_type = \"io.containerd.kata-qemu.v2\"
+  runtime_path = \"/opt/kata/bin/containerd-shim-kata-v2\"
+  privileged_without_host_devices = true
+  pod_annotations = [\"io.katacontainers.*\"]
+  [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.kata-nono-qemu.options]
+    ConfigPath = \"${KATA_CFG_NONO}\"
+CONTAINERD_EOF
+      systemctl restart containerd
+    "
+    sleep 3
+    echo "    containerd restarted with kata-nono-qemu handler."
+  fi
 fi
 
 # ── Install TOML config ───────────────────────────────────────────────────────
-# runtime_classes must match the RuntimeClass handler (nono-runc / kata-qemu),
-# not the RuntimeClass name.  kata-qemu is added when KATA=true.
-if [[ "$KATA" == "true" ]]; then
+# Handler names must match what the CRI runtime registers (not the RuntimeClass name).
+#   nono-runc        — runc + bind-mount nono delivery (always)
+#   kata-qemu        — Kata VM + bind-mount nono via virtiofs (kata-nono-sandbox)
+#   kata-nono-qemu   — Kata VM + nono embedded in guest rootfs (kata-nono-qemu)
+if [[ "$KATA" == "true" && "$KATA_ROOTFS" == "true" ]]; then
+  RUNTIME_CLASSES='["nono-runc", "kata-qemu", "kata-nono-qemu"]'
+  TOML=$(cat <<EOF
+runtime_classes = ${RUNTIME_CLASSES}
+default_profile = "default"
+nono_bin_path = "/opt/nono-nri/nono"
+socket_path = ""
+vm_rootfs_classes = ["kata-nono-qemu"]
+EOF
+)
+elif [[ "$KATA" == "true" ]]; then
   RUNTIME_CLASSES='["nono-runc", "kata-qemu"]'
-else
-  RUNTIME_CLASSES='["nono-runc"]'
-fi
-TOML=$(cat <<EOF
+  TOML=$(cat <<EOF
 runtime_classes = ${RUNTIME_CLASSES}
 default_profile = "default"
 nono_bin_path = "/opt/nono-nri/nono"
 socket_path = ""
 EOF
 )
+else
+  RUNTIME_CLASSES='["nono-runc"]'
+  TOML=$(cat <<EOF
+runtime_classes = ${RUNTIME_CLASSES}
+default_profile = "default"
+nono_bin_path = "/opt/nono-nri/nono"
+socket_path = ""
+EOF
+)
+fi
 docker exec "$NODE" sh -c "cat > /etc/nri/conf.d/10-nono-nri.toml <<'TOMLEOF'
 ${TOML}
 TOMLEOF"
@@ -337,6 +449,10 @@ kubectl apply -f "$REPO_ROOT/deploy/runtimeclass.yaml"
 if [[ "$KATA" == "true" ]]; then
   echo "==> Applying RuntimeClass (kata-nono-sandbox)..."
   kubectl apply -f "$REPO_ROOT/deploy/runtimeclass-kata.yaml"
+fi
+if [[ "$KATA_ROOTFS" == "true" ]]; then
+  echo "==> Applying RuntimeClass (kata-nono-qemu)..."
+  kubectl apply -f "$REPO_ROOT/deploy/runtimeclass-kata-nono-qemu.yaml"
 fi
 
 echo "==> Applying DaemonSet..."
