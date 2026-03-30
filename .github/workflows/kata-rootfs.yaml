@@ -1,6 +1,6 @@
 name: kata-rootfs-nono
 
-# Builds the kata Ubuntu Noble guest rootfs image with nono pre-installed
+# Builds the kata confidential guest rootfs image with nono pre-installed
 # and publishes it to GHCR.
 #
 # Image: ghcr.io/<owner>/kata-rootfs-nono:<kata-version>-<nono-version>
