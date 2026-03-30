@@ -112,6 +112,7 @@ elif [[ "$RUNTIME" == "crio" ]]; then
     REGISTRY_IP=$(docker inspect "$REGISTRY_NAME" \
       --format "{{(index .NetworkSettings.Networks \"${KIND_NET}\").IPAddress}}" 2>/dev/null || \
       docker inspect "$REGISTRY_NAME" --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{break}}{{end}}')
+    REGISTRY_IP=$(printf '%s' "$REGISTRY_IP" | tr -d '\n')
 
     # Configure CRI-O to allow insecure pulls from the local registry
     docker exec "$NODE" sh -c "
