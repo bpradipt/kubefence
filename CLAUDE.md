@@ -9,7 +9,7 @@
 
 **Format:**
 ```
-<type>(<scope>): <description>
+<type>: <description>
 
 Assisted-by: AI
 ```
