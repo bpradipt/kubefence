@@ -1,10 +1,12 @@
 # syntax=docker/dockerfile:1
 #
-# Builds a customised Kata Containers Ubuntu Noble confidential guest rootfs
+# Builds a customised Kata Containers confidential guest rootfs
 # image that includes the nono Landlock sandbox binary and shell wrapper scripts.
 #
-# The kata-ubuntu-noble-confidential.image (MBR+ext4 disk image) is extracted
-# from the kata-static release tarball.  The ext4 partition is modified
+# The source image is kata-containers-confidential.img located at
+# ./opt/kata/share/kata-containers/ in the kata-static release tarball.
+# The real file (kata-ubuntu-noble-confidential.image) is extracted; the
+# ext4 partition is modified
 # using dd + debugfs — no loop mount or root privileges required.
 #
 # Shell wrappers are installed at /usr/local/bin/{sh,bash,ash,dash,
@@ -46,7 +48,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /build
 
 # ── Download nono binary from release ────────────────────────────────────────
-# glibc build matches the Ubuntu Noble rootfs (musl not required).
+# glibc build matches the confidential guest rootfs (musl not required).
 RUN TARBALL="nono-${NONO_VERSION}-x86_64-unknown-linux-gnu.tar.gz" && \
     curl -fsSL \
       "https://github.com/always-further/nono/releases/download/${NONO_VERSION}/${TARBALL}" \
@@ -58,11 +60,12 @@ RUN TARBALL="nono-${NONO_VERSION}-x86_64-unknown-linux-gnu.tar.gz" && \
     chmod 0755 /build/nono && \
     rm /tmp/nono.tar.gz
 
-# ── Download and extract kata-ubuntu-noble-confidential.image ─────────────────
+# ── Download and extract confidential rootfs image ───────────────────────────
 # Stream-extract just the image file from the large kata-static tarball to
 # avoid downloading and storing the full ~1 GB archive.
-# Extract the real file (kata-ubuntu-noble-confidential.image), not the symlink
-# (kata-containers-confidential.img) — tar --to-stdout on a symlink returns 0 bytes.
+# Extract the real file (kata-ubuntu-noble-confidential.image) by its tarball path,
+# not the symlink (kata-containers-confidential.img) — tar --to-stdout on a symlink
+# returns 0 bytes silently.
 RUN echo "Downloading kata-static-${KATA_VERSION}-amd64.tar.zst (streaming)..." && \
     curl -fsSL \
       "https://github.com/kata-containers/kata-containers/releases/download/${KATA_VERSION}/kata-static-${KATA_VERSION}-amd64.tar.zst" \
