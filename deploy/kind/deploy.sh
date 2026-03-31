@@ -450,11 +450,15 @@ kubectl delete runtimeclass nono-sandbox --ignore-not-found 2>/dev/null || true
 kubectl apply -f "$REPO_ROOT/deploy/runtimeclass.yaml"
 if [[ "$KATA" == "true" ]]; then
   echo "==> Applying RuntimeClass (kata-nono-sandbox)..."
-  kubectl apply -f "$REPO_ROOT/deploy/runtimeclass-kata.yaml"
-fi
-if [[ "$KATA_ROOTFS" == "true" ]]; then
-  echo "==> Applying RuntimeClass (kata-nono-sandbox, kata-nono-qemu handler)..."
-  kubectl apply -f "$REPO_ROOT/deploy/runtimeclass-kata-nono-sandbox.yaml"
+  # handler is immutable — delete first to allow switching between virtiofs and embedded rootfs modes
+  kubectl delete runtimeclass kata-nono-sandbox --ignore-not-found 2>/dev/null || true
+  if [[ "$KATA_ROOTFS" == "true" ]]; then
+    # Embedded rootfs mode: kata-nono-sandbox → kata-nono-qemu handler
+    kubectl apply -f "$REPO_ROOT/deploy/runtimeclass-kata-nono-sandbox.yaml"
+  else
+    # Virtiofs bind-mount mode: kata-nono-sandbox → kata-qemu handler
+    kubectl apply -f "$REPO_ROOT/deploy/runtimeclass-kata.yaml"
+  fi
 fi
 
 echo "==> Applying DaemonSet..."
