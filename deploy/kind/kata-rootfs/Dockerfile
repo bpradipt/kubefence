@@ -77,8 +77,9 @@ RUN echo "Downloading kata-static-${KATA_VERSION}-amd64.tar.zst (streaming)..." 
 
 # ── Inject nono and wrapper scripts ──────────────────────────────────────────
 COPY inject.sh /build/inject.sh
+COPY policy.rego /build/policy.rego
 RUN chmod +x /build/inject.sh && \
-    /build/inject.sh /build/kata-ubuntu-noble-confidential.image /build/nono
+    /build/inject.sh /build/kata-ubuntu-noble-confidential.image /build/nono /build/policy.rego
 
 # ── Minimal final image ───────────────────────────────────────────────────────
 FROM scratch

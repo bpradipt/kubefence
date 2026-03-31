@@ -361,7 +361,7 @@ if [[ "$KATA" == "true" ]]; then
           > "${KATA_ROOTFS_CACHE}.tmp"
 
         bash "${SCRIPT_DIR}/kata-rootfs/inject.sh" \
-          "${KATA_ROOTFS_CACHE}.tmp" "$_NONO_BIN"
+          "${KATA_ROOTFS_CACHE}.tmp" "$_NONO_BIN" "${SCRIPT_DIR}/kata-rootfs/policy.rego"
         mv "${KATA_ROOTFS_CACHE}.tmp" "${KATA_ROOTFS_CACHE}"
         rm -rf "$_NONO_TMP"
         echo "    Local build complete."

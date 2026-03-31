@@ -4,11 +4,12 @@
 # Operates entirely on files (no root, no loop mount) using dd to extract
 # the ext4 partition from the MBR disk image and debugfs -w to write files.
 #
-# Usage: inject.sh <image-path> <nono-binary-path>
+# Usage: inject.sh <image-path> <nono-binary-path> [policy-rego-path]
 set -euo pipefail
 
 IMAGE="$1"
 NONO="$2"
+POLICY="${3:-}"
 
 # Detect partition geometry dynamically — works for any MBR/GPT disk image
 # without root or loop mounts. sfdisk is in the `fdisk` apt package.
@@ -77,6 +78,17 @@ write $WRAPPER /usr/local/bin/$NAME
 DEBUGFS_EOF
 done
 echo "==> Wrappers written for: sh bash ash dash python3 python node ruby perl"
+
+if [[ -n "$POLICY" ]]; then
+  echo "==> Creating /etc/kata-opa directory..."
+  debugfs -w "$PART_IMG" 2>/dev/null << DEBUGFS_EOF
+mkdir /etc/kata-opa
+DEBUGFS_EOF
+  echo "==> Injecting /etc/kata-opa/default-policy.rego ..."
+  debugfs -w "$PART_IMG" 2>/dev/null << DEBUGFS_EOF
+write $POLICY /etc/kata-opa/default-policy.rego
+DEBUGFS_EOF
+fi
 
 echo "==> Writing modified partition back into image..."
 dd if="$PART_IMG" bs=512 seek="$PART_START_SECTOR" of="$IMAGE" \
