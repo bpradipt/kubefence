@@ -360,12 +360,12 @@ fi
 
 echo ""
 
-# ── Test 6: kata-nono-qemu (embedded nono in VM rootfs) ──────────────────────
-echo "── Test 6: kata-nono-qemu (embedded nono in VM rootfs) ─────────────────"
+# ── Test 6: kata-nono-sandbox/kata-nono-qemu (embedded nono in VM rootfs) ────
+echo "── Test 6: kata-nono-sandbox (embedded nono in VM rootfs) ──────────────"
 
-KATA_QEMU_RC=$(kubectl get runtimeclass kata-nono-qemu --no-headers 2>/dev/null | awk '{print $1}' || echo "")
+KATA_QEMU_RC=$(kubectl get runtimeclass kata-nono-sandbox --no-headers 2>/dev/null | awk '{print $1}' || echo "")
 if [[ -z "$KATA_QEMU_RC" ]]; then
-  pass "kata-nono-qemu RuntimeClass (skipped — not installed)"
+  pass "kata-nono-sandbox RuntimeClass (skipped — not installed)"
 else
   # Wait for any previous kata VM to fully teardown before starting a new one.
   sleep 5
@@ -379,7 +379,7 @@ metadata:
   annotations:
     nono.sh/profile: "default"
 spec:
-  runtimeClassName: kata-nono-qemu
+  runtimeClassName: kata-nono-sandbox
   restartPolicy: Never
   containers:
     - name: test
@@ -388,7 +388,7 @@ spec:
       command: ["sleep", "infinity"]
 EOF
 
-  require "kata-nono-qemu pod becomes Running" \
+  require "kata-nono-sandbox pod becomes Running" \
     kubectl wait --for=condition=ready pod/nono-e2e-kata-qemu --timeout=120s
 
   # PID 1 should be sleep — nono wraps it via SetArgs then exec's into it.
