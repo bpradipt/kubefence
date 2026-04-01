@@ -157,6 +157,24 @@ EOF
   "
 fi
 
+if [[ "$RUNTIME" == "containerd" ]]; then
+  # Register nono-runc handler if not already present (idempotent — cluster-containerd.yaml
+  # adds it at creation time, but cluster.yaml and manual clusters may not have it).
+  docker exec "$NODE" sh -c "
+    if ! grep -q 'runtimes.nono-runc' /etc/containerd/config.toml 2>/dev/null; then
+      cat >> /etc/containerd/config.toml << 'CONTAINERD_EOF'
+[plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.nono-runc]
+  runtime_type = \"io.containerd.runc.v2\"
+CONTAINERD_EOF
+      systemctl restart containerd
+      sleep 3
+      echo \"    containerd restarted with nono-runc handler.\"
+    else
+      echo \"    nono-runc handler already registered — skipping restart.\"
+    fi
+  "
+fi
+
 # ── Install Kata Containers via helm ──────────────────────────────────────────
 if [[ "$KATA" == "true" ]]; then
   echo ""
