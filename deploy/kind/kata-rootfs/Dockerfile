@@ -1,21 +1,18 @@
 # syntax=docker/dockerfile:1
 #
 # Builds a customised Kata Containers confidential guest rootfs
-# image that includes the nono Landlock sandbox binary and shell wrapper scripts.
+# image that includes the nono Landlock sandbox binary and a kata-agent
+# OPA enforcement policy.
 #
 # The source image is kata-containers-confidential.img located at
 # ./opt/kata/share/kata-containers/ in the kata-static release tarball.
 # The real file (kata-ubuntu-noble-confidential.image) is extracted; the
-# ext4 partition is modified
-# using dd + debugfs — no loop mount or root privileges required.
-#
-# Shell wrappers are installed at /usr/local/bin/{sh,bash,ash,dash,
-# python3,python,node,ruby,perl}.  The Ubuntu rootfs /etc/environment
-# already lists /usr/local/bin before /bin, so `kubectl exec pod -- bash`
-# finds the wrapper first and nono is applied without image changes.
+# ext4 partition is modified using dd + debugfs — no loop mount or root
+# privileges required.
 #
 # The nono binary is installed at /nono/nono (matching the path used by the
-# NRI plugin's SetArgs) with a symlink from /usr/local/bin/nono.
+# NRI plugin's SetArgs).  The OPA policy at /etc/kata-opa/default-policy.rego
+# controls exec access inside the Kata VM.
 #
 # Usage:
 #   docker build \
@@ -75,7 +72,7 @@ RUN echo "Downloading kata-static-${KATA_VERSION}-amd64.tar.zst (streaming)..." 
     > /build/kata-ubuntu-noble-confidential.image && \
     ls -lh /build/kata-ubuntu-noble-confidential.image
 
-# ── Inject nono and wrapper scripts ──────────────────────────────────────────
+# ── Inject nono binary and OPA policy ────────────────────────────────────────
 COPY inject.sh /build/inject.sh
 COPY policy.rego /build/policy.rego
 RUN chmod +x /build/inject.sh && \
