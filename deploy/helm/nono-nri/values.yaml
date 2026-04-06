@@ -1,0 +1,43 @@
+# Namespace for all resources
+namespace: kube-system
+
+# Container image
+image:
+  repository: nono-nri
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Optional ServiceAccount
+serviceAccount:
+  create: false
+
+# NRI plugin TOML configuration
+# These values are rendered into /etc/nri/conf.d/10-nono-nri.toml
+config:
+  runtimeClasses:
+    - nono-runc
+  defaultProfile: "default"
+  nonoBinPath: "/opt/nono-nri/nono"
+  socketPath: ""
+  vmRootfsClasses: []
+
+# Host paths for volume mounts
+hostPaths:
+  nriSocket: /var/run/nri
+  nonoHostDir: /opt/nono-nri
+  nriPlugins: /opt/nri/plugins
+
+# RuntimeClass creation
+runtimeClasses:
+  nonoRunc:
+    enabled: true
+  kataNono:
+    enabled: false
+    handler: "kata-qemu"
+
+# DaemonSet tolerations
+tolerations:
+  - operator: Exists
+
+# Resource requests/limits (empty by default)
+resources: {}
