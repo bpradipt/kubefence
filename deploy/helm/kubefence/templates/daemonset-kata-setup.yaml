@@ -3,20 +3,20 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: {{ include "nono-nri.fullname" . }}-kata-setup
+  name: {{ include "kubefence.fullname" . }}-kata-setup
   namespace: {{ .Values.namespace }}
   labels:
-    {{- include "nono-nri.labels" . | nindent 4 }}
+    {{- include "kubefence.labels" . | nindent 4 }}
     app.kubernetes.io/component: kata-setup
 spec:
   selector:
     matchLabels:
-      {{- include "nono-nri.selectorLabels" . | nindent 6 }}
+      {{- include "kubefence.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: kata-setup
   template:
     metadata:
       labels:
-        {{- include "nono-nri.selectorLabels" . | nindent 8 }}
+        {{- include "kubefence.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: kata-setup
     spec:
       automountServiceAccountToken: false

@@ -1,5 +1,5 @@
 apiVersion: v2
-name: nono-nri
+name: kubefence
 description: NRI plugin that wraps container processes with the nono Landlock sandbox
 type: application
 version: 0.1.0

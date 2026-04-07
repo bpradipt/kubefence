@@ -4,6 +4,6 @@ kind: RuntimeClass
 metadata:
   name: nono-runc
   labels:
-    {{- include "nono-nri.labels" . | nindent 4 }}
+    {{- include "kubefence.labels" . | nindent 4 }}
 handler: nono-runc
 {{- end }}

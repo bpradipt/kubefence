@@ -171,7 +171,7 @@ make docker-build IMAGE=nono-nri:latest
 make kind-e2e
 
 # external image quick-start (no source build)
-IMAGE=ghcr.io/bpradipt/kubefence:latest SKIP_BUILD=true KATA=false \
+IMAGE=ghcr.io/kubefence/nono-nri-plugin:latest SKIP_BUILD=true KATA=false \
   bash deploy/kind/deploy.sh
 RUNTIME=containerd CLUSTER_NAME=nono-containerd bash deploy/kind/e2e.sh
 ```
@@ -291,7 +291,7 @@ The NRI socket mount is read-only because the plugin connects *to* containerd
 
 ## Published image
 
-`ghcr.io/bpradipt/kubefence` is built by `.github/workflows/release.yaml`:
+`ghcr.io/kubefence/nono-nri-plugin` is built by `.github/workflows/release.yaml`:
 - Builds `nono` from source (`always-further/nono` at `NONO_VERSION`) as a glibc
   binary (no libdbus/libsystemd) via `scripts/build-nono.sh`
 - Compiles `10-nono-nri` from repo source with `CGO_ENABLED=0`
@@ -303,6 +303,6 @@ The NRI socket mount is read-only because the plugin connects *to* containerd
 To use the published image without a local build:
 
 ```bash
-IMAGE=ghcr.io/bpradipt/kubefence:latest SKIP_BUILD=true KATA=false \
+IMAGE=ghcr.io/kubefence/nono-nri-plugin:latest SKIP_BUILD=true KATA=false \
   bash deploy/kind/deploy.sh
 ```

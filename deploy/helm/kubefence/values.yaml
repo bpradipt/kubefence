@@ -5,7 +5,7 @@ namespace: kube-system
 # For dev (Kind) deploy.sh overrides repository/tag via --set to point at
 # the locally-built image loaded into the cluster.
 image:
-  repository: ghcr.io/kubefence/kubefence
+  repository: ghcr.io/kubefence/nono-nri-plugin
   tag: latest
   pullPolicy: IfNotPresent
 
