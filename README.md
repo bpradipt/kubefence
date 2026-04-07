@@ -190,14 +190,13 @@ Deploy on any containerd cluster. The Helm chart automatically enables NRI
 and registers the `nono-runc` handler on every node via a privileged
 DaemonSet — no manual containerd config changes required.
 
-**Prerequisites:** containerd 2.2.0+, Linux 5.13+, Helm 3.x.
+**Prerequisites:** containerd 2.2.0+, Linux 5.13+, Helm 3.8+.
 
 ```bash
-git clone https://github.com/kubefence/kubefence
-cd kubefence
-
 # Install nono-nri
-helm upgrade --install nono-nri deploy/helm/nono-nri \
+helm upgrade --install nono-nri \
+  oci://ghcr.io/kubefence/charts/nono-nri \
+  --version 1.0.0 \
   --namespace kube-system \
   --wait
 
@@ -245,7 +244,9 @@ kubectl rollout status daemonset/kata-deploy -n kube-system --timeout=5m
 **Step 2 — Install nono-nri with Kata support**
 
 ```bash
-helm upgrade --install nono-nri deploy/helm/nono-nri \
+helm upgrade --install nono-nri \
+  oci://ghcr.io/kubefence/charts/nono-nri \
+  --version 1.0.0 \
   --namespace kube-system \
   --set kata.enabled=true \
   --set runtimeClasses.kataNono.enabled=true \
@@ -300,7 +301,9 @@ metadata:
 **Upgrade nono-nri** (updates all three images atomically):
 
 ```bash
-helm upgrade nono-nri deploy/helm/nono-nri \
+helm upgrade nono-nri \
+  oci://ghcr.io/kubefence/charts/nono-nri \
+  --version 1.1.0 \
   --namespace kube-system \
   --reuse-values
 ```
@@ -357,6 +360,7 @@ Invalid values are silently ignored and fall back to `default_profile`.
 | `release` | GitHub release published | `ghcr.io/kubefence/kubefence:<version>` |
 | `kata-kernel` | release + push (Dockerfile/workflow/landlock.conf) | `ghcr.io/kubefence/kata-kernel-landlock:<kata-version>` |
 | `kata-rootfs` | release + push (Dockerfile/inject.sh/policy.rego) | `ghcr.io/kubefence/kata-rootfs-nono:<kata-version>-<nono-version>` |
+| `helm-publish` | release + push (chart files) | `oci://ghcr.io/kubefence/charts/nono-nri:<version>` |
 
 The pinned `NONO_VERSION` in
 [`.github/workflows/release.yaml`](.github/workflows/release.yaml)
