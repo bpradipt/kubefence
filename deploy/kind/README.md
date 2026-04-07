@@ -7,10 +7,10 @@ Two cluster configurations are provided — one for each supported container run
 Prerequisites: Docker, [Kind](https://kind.sigs.k8s.io/) v0.20+, kubectl, helm.
 
 ```bash
-git clone https://github.com/bpradipt/kubefence
+git clone https://github.com/kubefence/kubefence
 cd kubefence
 
-IMAGE=ghcr.io/bpradipt/kubefence:latest \
+IMAGE=ghcr.io/kubefence/nono-nri-plugin:latest \
 SKIP_BUILD=true \
 bash deploy/kind/deploy.sh
 ```
@@ -48,8 +48,8 @@ a Landlock-enabled build, patches the QEMU config, and registers the
 ```bash
 KATA=true \
 SKIP_BUILD=true \
-IMAGE=ghcr.io/bpradipt/kubefence:latest \
-KATA_KERNEL_IMAGE=ghcr.io/bpradipt/kata-kernel-landlock:3.28.0 \
+IMAGE=ghcr.io/kubefence/nono-nri-plugin:latest \
+KATA_KERNEL_IMAGE=ghcr.io/kubefence/kata-kernel-landlock:3.28.0 \
 bash deploy/kind/deploy.sh
 ```
 
@@ -169,7 +169,7 @@ RUNTIME=crio bash deploy/kind/deploy.sh
 |----------|---------|-------------|
 | `RUNTIME` | `containerd` | `containerd` or `crio` |
 | `CLUSTER_NAME` | `nono-<runtime>` | Kind cluster name |
-| `IMAGE` | `nono-nri:latest` | Plugin image tag (set to `ghcr.io/bpradipt/kubefence:latest` to use the published image) |
+| `IMAGE` | `nono-nri:latest` | Plugin image tag (set to `ghcr.io/kubefence/nono-nri-plugin:latest` to use the published image) |
 | `SKIP_BUILD` | `false` | Skip `make docker-build`; pull `IMAGE` from a registry instead |
 | `KATA` | `false` | Install Kata Containers with a Landlock-enabled kernel (`true`/`false`). |
 | `KATA_VERSION` | `3.28.0` | kata-containers release to install. Keep in sync with `KATA_VERSION` in `.github/workflows/kata-kernel.yaml`. |

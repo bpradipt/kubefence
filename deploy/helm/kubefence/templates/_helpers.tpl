@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "nono-nri.name" -}}
+{{- define "kubefence.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
 */}}
-{{- define "nono-nri.fullname" -}}
+{{- define "kubefence.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,16 +24,16 @@ Create a default fully qualified app name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "nono-nri.chart" -}}
+{{- define "kubefence.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "nono-nri.labels" -}}
-helm.sh/chart: {{ include "nono-nri.chart" . }}
-{{ include "nono-nri.selectorLabels" . }}
+{{- define "kubefence.labels" -}}
+helm.sh/chart: {{ include "kubefence.chart" . }}
+{{ include "kubefence.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -43,7 +43,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "nono-nri.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "nono-nri.name" . }}
+{{- define "kubefence.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "kubefence.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}

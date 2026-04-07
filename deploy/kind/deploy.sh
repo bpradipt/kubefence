@@ -506,23 +506,23 @@ elif [[ "$KATA" == "true" ]]; then
   )
 fi
 
-helm upgrade --install nono-nri "$REPO_ROOT/deploy/helm/nono-nri" \
+helm upgrade --install kubefence "$REPO_ROOT/deploy/helm/kubefence" \
   --namespace kube-system \
   --wait --timeout 120s \
   "${HELM_SET_ARGS[@]}"
 
-echo "==> nono-nri deployed."
+echo "==> kubefence deployed."
 
 # Belt-and-suspenders: Helm 3 --wait has known DaemonSet readiness gaps.
 # Verify DaemonSet rollout explicitly, then emit pod diagnostics on failure
 # so the root cause is visible without a separate kubectl session.
 echo ""
 echo "==> Waiting for DaemonSet rollout..."
-kubectl rollout status daemonset/nono-nri -n kube-system --timeout=120s || {
+kubectl rollout status daemonset/kubefence -n kube-system --timeout=120s || {
   echo ""
   echo "ERROR: DaemonSet rollout timed out. Pod diagnostics:"
-  kubectl get pods -n kube-system -l app.kubernetes.io/name=nono-nri -o wide 2>/dev/null || true
-  _POD=$(kubectl get pod -n kube-system -l app.kubernetes.io/name=nono-nri \
+  kubectl get pods -n kube-system -l app.kubernetes.io/name=kubefence -o wide 2>/dev/null || true
+  _POD=$(kubectl get pod -n kube-system -l app.kubernetes.io/name=kubefence \
            -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
   if [[ -n "$_POD" ]]; then
     echo ""

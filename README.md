@@ -4,35 +4,47 @@
 > This is experimental test code. It is provided as-is with no guarantees of
 > stability, security, or support.
 
-An [NRI (Node Resource Interface)](https://github.com/containerd/nri) plugin for Kubernetes that
-transparently sandboxes container commands using [nono](https://nono.sh), a kernel-enforced
-sandbox CLI built on Linux Landlock. 
-It should be pretty straightforward to switch from nono to an alternative process sandboxing mechanism.
+This project is an opinionated combination of NRI plugin, pod and process
+sandbox for securely running untrusted workloads (eg. AI agent generated code)
+in Kubernetes cluster. 
 
-**Kata Containers is the default and preferred runtime.** The plugin intercepts container
-creation and prepends `nono wrap` to `process.args` via `ContainerAdjustment.SetArgs()`.
-Runc is supported as an opt-in alternative.
+The [NRI (Node Resource Interface)](https://github.com/containerd/nri) plugin
+for Kubernetes transparently sandboxes container commands using
+[nono](https://nono.sh), a kernel-enforced sandbox CLI built on Linux Landlock.
+
+It should be pretty straightforward to switch from nono to an alternative
+process sandboxing mechanism.
+
+Pod sandboxing is provided by [Kata
+containers](https://github.com/kata-containers/kata-containers) runtime. The
+NRI plugin intercepts container creation and prepends `nono wrap` to
+`process.args` via `ContainerAdjustment.SetArgs()`. 
 
 There are multiple reasons for Kata containers being the preferred runtime
 
-- Kata containers runs the pod in a separate VM, thereby prividing additional
+- Kata containers runs the pod in a separate VM, thereby providing additional
   protection to the worker node on container escapes. With Kata the container
   must escape the VM protection as well.
-- Ability to use a specific kernel config for the workloads, since pods runs in a VM
+- Ability to use a specific kernel config for the workloads, since pods run in a VM
 - Execs triggered via `kubectl exec` is **blocked at the kata-agent level for
   Kata pods**.
 
-If you are using this for `runc` ensure you disable exec via admission policies.
-An example is using [Kyverno](https://kyverno.io/policies/other/block-pod-exec-by-pod-name/block-pod-exec-by-pod-name/)
+You can use [runc](https://github.com/opencontainers/runc) as an alternative
+container runtime but for running agents Kata (or similar VM based container
+runtime) is preferred due to the reasons mentioned above.
+
+Note that, if you are using this for `runc` ensure you disable exec via
+admission policies.  An example is using
+[Kyverno](https://kyverno.io/policies/other/block-pod-exec-by-pod-name/block-pod-exec-by-pod-name/)
 
 ## Threat Model
 
-nono-nri protects the **host worker node** from the workloads.
+Goal: Protecting the **worker node** from the workloads.
 
-**Trusted** — the host side and everything it provides to the guest:
-- The host OS, its kernel, and all binaries running on it
-- The nono-nri plugin itself and the nono binary it distributes
-- Everything the host injects into the container at creation time: the
+**Trusted** — the worker node and everything it provides to the workload:
+- The node OS, its kernel, and all binaries running on it
+- The nono-nri plugin itself and the nono binary
+- Everything the node injects into the container at creation time: the
   `/nono` bind-mount, the `SetArgs` override that installs nono as PID 1,
   and the `NONO_PROFILE` / `PATH` environment variables
 
@@ -76,7 +88,7 @@ See [`contrib/`](contrib/) for manifests, Dockerfiles, and full demo scripts.
 2. The NRI plugin receives the `CreateContainer` event from CRI-O or containerd
 3. The plugin prepends `/nono/nono wrap --profile <profile> --` to the container's `process.args`
 4. The container starts — nono applies the Landlock sandbox and `exec()`s into the original command
-5. The container process runs kernel-enforced sandboxed; nono has replaced itself
+5. The container process runs sandboxed under kernel enforcement; nono has replaced itself as PID 1
 
 ```
 Pod spec: command: ["myapp", "--flag"]
@@ -92,10 +104,10 @@ Published images (built by CI on every release):
 
 | Image | Contents |
 |-------|----------|
-| `ghcr.io/kubefence/kubefence:latest` | NRI plugin (`10-nono-nri`) + `nono` sandbox binary |
+| `ghcr.io/kubefence/nono-nri-plugin:latest` | NRI plugin (`10-nono-nri`) + `nono` sandbox binary |
 | `ghcr.io/kubefence/kata-kernel-landlock:latest` | Kata guest kernel with `CONFIG_SECURITY_LANDLOCK=y` |
 | `ghcr.io/kubefence/kata-rootfs-nono:latest` | Kata rootfs with `nono` binary pre-installed |
-| `ghcr.io/kubefence/charts/nono-nri:latest` | Helm charts for deployment |
+| `ghcr.io/kubefence/charts/kubefence:latest` | Helm charts for deployment |
 
 
 ## Requirements
@@ -132,11 +144,11 @@ helm upgrade --install kata-deploy \
 kubectl rollout status daemonset/kata-deploy -n kube-system --timeout=5m
 ```
 
-**Step 2 — Install nono-nri with Kata support**
+**Step 2 — Install kubefence with Kata support**
 
 ```bash
-helm upgrade --install nono-nri \
-  oci://ghcr.io/kubefence/charts/nono-nri \
+helm upgrade --install kubefence \
+  oci://ghcr.io/kubefence/charts/kubefence \
   --version 1.0.0 \
   --namespace kube-system \
   --set kata.enabled=true \
@@ -151,7 +163,7 @@ The `kata-setup` DaemonSet will:
 - Pull `ghcr.io/kubefence/kata-kernel-landlock:latest` and install the
   Landlock-enabled `vmlinux` onto each node
 - Pull `ghcr.io/kubefence/kata-rootfs-nono:latest` and install the
-  confidential rootfs (with `nono` pre-installed) onto each node
+  Kata rootfs (with `nono` pre-installed) onto each node
 - Patch the kata QEMU config to use the Landlock kernel
 - Create `configuration-kata-nono-qemu.toml` referencing the nono rootfs
 - Register the `kata-nono-qemu` runtime handler in containerd
@@ -159,9 +171,9 @@ The `kata-setup` DaemonSet will:
 **Step 3 — Verify**
 
 ```bash
-kubectl rollout status daemonset/nono-nri-node-setup  -n kube-system
-kubectl rollout status daemonset/nono-nri-kata-setup  -n kube-system
-kubectl rollout status daemonset/nono-nri              -n kube-system
+kubectl rollout status daemonset/kubefence-node-setup  -n kube-system
+kubectl rollout status daemonset/kubefence-kata-setup  -n kube-system
+kubectl rollout status daemonset/kubefence              -n kube-system
 
 # Two RuntimeClasses should exist
 kubectl get runtimeclass nono-runc kata-nono-sandbox
@@ -189,11 +201,11 @@ metadata:
     nono.sh/profile: "strict"
 ```
 
-**Upgrade nono-nri** (updates all three images atomically):
+**Upgrade kubefence** (updates all three images atomically):
 
 ```bash
-helm upgrade nono-nri \
-  oci://ghcr.io/kubefence/charts/nono-nri \
+helm upgrade kubefence \
+  oci://ghcr.io/kubefence/charts/kubefence \
   --version 1.1.0 \
   --namespace kube-system \
   --reuse-values
@@ -208,16 +220,16 @@ DaemonSet — no manual containerd config changes required.
 **Prerequisites:** containerd 2.2.0+, Linux 5.13+, Helm 3.8+.
 
 ```bash
-# Install nono-nri
-helm upgrade --install nono-nri \
-  oci://ghcr.io/kubefence/charts/nono-nri \
+# Install kubefence
+helm upgrade --install kubefence \
+  oci://ghcr.io/kubefence/charts/kubefence \
   --version 1.0.0 \
   --namespace kube-system \
   --wait
 
 # Verify all three DaemonSets are ready
-kubectl rollout status daemonset/nono-nri-node-setup -n kube-system
-kubectl rollout status daemonset/nono-nri            -n kube-system
+kubectl rollout status daemonset/kubefence-node-setup -n kube-system
+kubectl rollout status daemonset/kubefence            -n kube-system
 ```
 
 Apply the `nono-runc` RuntimeClass to workloads:
@@ -239,15 +251,15 @@ kubectl wait --for=condition=ready pod/nono-test --timeout=60s
 
 # nono exec()s into sleep — /proc/1/cmdline shows the original command
 kubectl exec nono-test -- cat /proc/1/cmdline | tr '\0' ' '
-# → sleep infinity
+# sleep infinity
 
 # nono binary is bind-mounted into the container
 kubectl exec nono-test -- ls -la /nono/nono
-# → -rwxr-xr-x 1 root root ... /nono/nono
+# -rwxr-xr-x 1 root root ... /nono/nono
 
 # Check plugin decision logs
-kubectl logs -n kube-system -l app.kubernetes.io/name=nono-nri | grep nono-test
-# → {"msg":"injected","decision":"inject","pod":"nono-test","profile":"default",...}
+kubectl logs -n kube-system -l app.kubernetes.io/name=kubefence | grep nono-test
+# {"msg":"injected","decision":"inject","pod":"nono-test","profile":"default",...}
 
 # Cleanup
 kubectl delete pod nono-test

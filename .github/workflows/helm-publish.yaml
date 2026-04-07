@@ -1,12 +1,12 @@
 name: helm-publish
 
-# Packages and pushes the nono-nri Helm chart to GHCR as an OCI artifact.
+# Packages and pushes the kubefence Helm chart to GHCR as an OCI artifact.
 #
-# Chart: oci://ghcr.io/<owner>/charts/nono-nri
+# Chart: oci://ghcr.io/<owner>/charts/kubefence
 #
 # Install:
-#   helm upgrade --install nono-nri \
-#     oci://ghcr.io/<owner>/charts/nono-nri \
+#   helm upgrade --install kubefence \
+#     oci://ghcr.io/<owner>/charts/kubefence \
 #     --version <semver> --namespace kube-system
 #
 # Triggered:
@@ -20,7 +20,7 @@ on:
   push:
     branches: [main, master]
     paths:
-      - "deploy/helm/nono-nri/**"
+      - "deploy/helm/kubefence/**"
       - ".github/workflows/helm-publish.yaml"
   workflow_dispatch:
     inputs:
@@ -67,17 +67,17 @@ jobs:
       - name: Package chart
         run: |
           # Stamp version into a working copy — the source chart is not modified.
-          cp -r deploy/helm/nono-nri /tmp/nono-nri-chart
+          cp -r deploy/helm/kubefence /tmp/kubefence-chart
           sed -i "s/^version:.*/version: ${{ steps.ver.outputs.version }}/" \
-            /tmp/nono-nri-chart/Chart.yaml
+            /tmp/kubefence-chart/Chart.yaml
           sed -i "s/^appVersion:.*/appVersion: \"${{ steps.ver.outputs.version }}\"/" \
-            /tmp/nono-nri-chart/Chart.yaml
-          helm package /tmp/nono-nri-chart --destination /tmp/charts
+            /tmp/kubefence-chart/Chart.yaml
+          helm package /tmp/kubefence-chart --destination /tmp/charts
           ls -lh /tmp/charts/
 
       - name: Push chart to GHCR
         run: |
-          helm push /tmp/charts/nono-nri-${{ steps.ver.outputs.version }}.tgz \
+          helm push /tmp/charts/kubefence-${{ steps.ver.outputs.version }}.tgz \
             oci://${{ env.CHART_REPO }}
 
       - name: Summary
@@ -87,8 +87,8 @@ jobs:
           echo "**Version:** \`${{ steps.ver.outputs.version }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo '```bash' >> "$GITHUB_STEP_SUMMARY"
-          echo "helm upgrade --install nono-nri \\" >> "$GITHUB_STEP_SUMMARY"
-          echo "  oci://${{ env.CHART_REPO }}/nono-nri \\" >> "$GITHUB_STEP_SUMMARY"
+          echo "helm upgrade --install kubefence \\" >> "$GITHUB_STEP_SUMMARY"
+          echo "  oci://${{ env.CHART_REPO }}/kubefence \\" >> "$GITHUB_STEP_SUMMARY"
           echo "  --version ${{ steps.ver.outputs.version }} \\" >> "$GITHUB_STEP_SUMMARY"
           echo "  --namespace kube-system" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"

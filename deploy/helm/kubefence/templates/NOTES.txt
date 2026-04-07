@@ -1,0 +1,5 @@
+nono-nri has been deployed to namespace {{ .Values.namespace }}.
+
+Plugin config: kubectl get configmap -n {{ .Values.namespace }} {{ include "kubefence.fullname" . }}-config -o yaml
+DaemonSet:     kubectl get daemonset -n {{ .Values.namespace }} {{ include "kubefence.fullname" . }}
+Logs:          kubectl logs -n {{ .Values.namespace }} -l {{ include "kubefence.selectorLabels" . | replace ": " "=" | replace "\n" "," }} -f

@@ -4,6 +4,6 @@ kind: RuntimeClass
 metadata:
   name: kata-nono-sandbox
   labels:
-    {{- include "nono-nri.labels" . | nindent 4 }}
+    {{- include "kubefence.labels" . | nindent 4 }}
 handler: {{ .Values.runtimeClasses.kataNono.handler }}
 {{- end }}

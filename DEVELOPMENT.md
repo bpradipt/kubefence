@@ -37,7 +37,7 @@ cd kubefence
 
 # Default: Kata Containers + embedded nono rootfs (recommended)
 SKIP_BUILD=true \
-IMAGE=ghcr.io/kubefence/kubefence:latest \
+IMAGE=ghcr.io/kubefence/nono-nri-plugin:latest \
 bash deploy/kind/deploy.sh
 
 # Run e2e tests (runc + Kata)
@@ -66,7 +66,7 @@ VM, and `kubectl exec` blocked at the hypervisor by the kata-agent OPA policy
 ```bash
 KATA=false \
 SKIP_BUILD=true \
-IMAGE=ghcr.io/kubefence/kubefence:latest \
+IMAGE=ghcr.io/kubefence/nono-nri-plugin:latest \
 bash deploy/kind/deploy.sh
 ```
 
@@ -137,10 +137,10 @@ deploy/
 | Workflow | Trigger | Publishes |
 |----------|---------|-----------|
 | `lint` | push / PR to main | — (gofmt, go vet, mod tidy, unit tests) |
-| `release` | GitHub release published | `ghcr.io/kubefence/kubefence:<version>` |
+| `release` | GitHub release published | `ghcr.io/kubefence/nono-nri-plugin:<version>` |
 | `kata-kernel` | release + push (Dockerfile/workflow/landlock.conf) | `ghcr.io/kubefence/kata-kernel-landlock:<kata-version>` |
 | `kata-rootfs` | release + push (Dockerfile/inject.sh/policy.rego) | `ghcr.io/kubefence/kata-rootfs-nono:<kata-version>-<nono-version>` |
-| `helm-publish` | release + push (chart files) | `oci://ghcr.io/kubefence/charts/nono-nri:<version>` |
+| `helm-publish` | release + push (chart files) | `oci://ghcr.io/kubefence/charts/kubefence:<version>` |
 
 The pinned `NONO_VERSION` in
 [`.github/workflows/release.yaml`](.github/workflows/release.yaml)
