@@ -96,4 +96,6 @@ spec:
             path: /etc/nri/conf.d
             type: DirectoryOrCreate
         - name: nono-state
-          emptyDir: {}
+          hostPath:
+            path: /var/run/nono-nri
+            type: DirectoryOrCreate
