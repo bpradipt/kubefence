@@ -41,8 +41,17 @@ runtimeClasses:
 tolerations:
   - operator: Exists
 
-# Resource requests/limits (empty by default)
-resources: {}
+# Resource requests/limits for the nono-nri plugin container.
+# Limits prevent a burst of container-creation events from exhausting
+# node memory and triggering an OOM kill, which would leave a window
+# where new containers start without nono injection.
+resources:
+  requests:
+    cpu: 50m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
 
 # Helper images used by privileged init containers in nodeSetup and kata DaemonSets.
 # Pin to immutable digests in production to prevent registry compromise from
