@@ -26,7 +26,7 @@ spec:
         # kata-deploy must install its binaries and write the QEMU config file
         # before we patch it.  Poll until the file appears.
         - name: wait-for-kata
-          image: busybox:1.37.0-uclibc
+          image: {{ .Values.helperImages.busybox | quote }}
           command: ["/bin/sh", "-c"]
           args:
             - |
@@ -86,7 +86,7 @@ spec:
         # Privileged so it can write to host-owned kata config files and send
         # SIGHUP to containerd for config reload without a full restart.
         - name: configure-kata
-          image: alpine:3.20
+          image: {{ .Values.helperImages.alpine | quote }}
           securityContext:
             privileged: true
           command: ["/bin/sh", "-c"]
@@ -162,7 +162,7 @@ spec:
       # reflects node readiness and kubectl can inspect logs.
       containers:
         - name: kata-setup-complete
-          image: busybox:1.37.0-uclibc
+          image: {{ .Values.helperImages.busybox | quote }}
           command: ["/bin/sh", "-c", "echo 'kata node setup complete'; sleep infinity"]
           securityContext:
             allowPrivilegeEscalation: false
