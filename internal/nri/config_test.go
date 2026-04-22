@@ -103,6 +103,16 @@ default_profile = "default"
 		Expect(err.Error()).To(ContainSubstring("nono_bin_path must not be empty"))
 	})
 
+	It("returns error for relative nono_bin_path", func() {
+		path := writeTempConfig(`runtime_classes = ["nono-runc"]
+default_profile = "default"
+nono_bin_path = "relative/path/nono"
+`)
+		_, err := nri.LoadConfig(path)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("must be an absolute path"))
+	})
+
 	It("allows missing nono_bin_path when all handlers are in vm_rootfs_classes", func() {
 		path := writeTempConfig(`runtime_classes = ["kata-nono-qemu"]
 default_profile = "default"

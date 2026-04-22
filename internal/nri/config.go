@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/pelletier/go-toml/v2"
 )
@@ -61,6 +62,11 @@ func LoadConfig(path string) (*Config, error) {
 				return nil, fmt.Errorf("config: nono_bin_path must not be empty when bind-mount delivery is used (handler %q is not in vm_rootfs_classes)", rc)
 			}
 		}
+	}
+	// A relative NonoBinPath causes filepath.Dir to return "." which silently
+	// becomes the bind-mount source, mounting the plugin's cwd into containers.
+	if cfg.NonoBinPath != "" && !filepath.IsAbs(cfg.NonoBinPath) {
+		return nil, fmt.Errorf("config: nono_bin_path %q must be an absolute path", cfg.NonoBinPath)
 	}
 	return &cfg, nil
 }
