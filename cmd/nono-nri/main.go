@@ -88,6 +88,11 @@ func run() error {
 	)
 
 	if err := s.Run(ctx); err != nil {
+		// A context cancellation (SIGTERM/SIGINT) causes the ttrpc server to
+		// close and return an error. That is a clean shutdown, not a failure.
+		if ctx.Err() != nil {
+			return nil
+		}
 		return fmt.Errorf("plugin exited: %w", err)
 	}
 	return nil
