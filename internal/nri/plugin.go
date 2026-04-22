@@ -35,7 +35,6 @@ func (p *Plugin) CreateContainer(
 	namespace := pod.GetNamespace()
 	podName := pod.GetName()
 	ctrID := ctr.GetId()
-	profile := ResolveProfile(pod, p.Config)
 
 	if !ShouldSandbox(pod, p.Config) {
 		p.Log.Info("skip",
@@ -44,11 +43,13 @@ func (p *Plugin) CreateContainer(
 			"container_id", ctrID,
 			"namespace", namespace,
 			"pod", podName,
-			"profile", profile,
+			"profile", "", // not sandboxed; no profile is applied
 			"runtime_handler", handler,
 		)
 		return nil, nil, nil
 	}
+
+	profile := ResolveProfile(pod, p.Config)
 
 	adj := BuildAdjustment(ctr, profile, p.Config.NonoBinPath, p.Config.IsVMRootfsClass(handler))
 	if err := WriteMetadata(pod.GetUid(), ctrID, podName, namespace, profile); err != nil {
