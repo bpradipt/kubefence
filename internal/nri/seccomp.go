@@ -96,8 +96,15 @@ var runtimeDefaultAllowed = []string{
 	"clock_gettime64",
 	"clock_nanosleep",
 	"clock_nanosleep_time64",
+	// arch_prctl: x86-64 TLS setup (ARCH_SET_FS). Called by the glibc dynamic
+	// linker before any user code runs; its absence causes immediate exit 127.
+	"arch_prctl",
 	"close",
 	"close_range",
+	// clone/clone3: thread creation (pthread_create). clone3 is preferred by
+	// glibc 2.32+ on new kernels; both are needed for compatibility.
+	"clone",
+	"clone3",
 	"connect",
 	"copy_file_range",
 	"creat",
@@ -224,6 +231,8 @@ var runtimeDefaultAllowed = []string{
 	"lstat64",
 	"madvise",
 	"mbind",
+	// modify_ldt: x86 LDT segment management; present in moby RuntimeDefault.
+	"modify_ldt",
 	"membarrier",
 	"memfd_create",
 	"memfd_secret",

@@ -14,6 +14,4 @@ data:
     {{- if .Values.config.vmRootfsClasses }}
     vm_rootfs_classes = {{ .Values.config.vmRootfsClasses | toJson }}
     {{- end }}
-    {{- if .Values.config.seccompProfile }}
     seccomp_profile = {{ .Values.config.seccompProfile | quote }}
-    {{- end }}
