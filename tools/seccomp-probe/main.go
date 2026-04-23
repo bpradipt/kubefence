@@ -48,7 +48,7 @@ type probe struct {
 	// nr, a1-a3: syscall number and first three arguments.
 	// We use deliberately invalid arguments so the call fails safely even
 	// when seccomp allows it — we only want to observe the errno.
-	nr       uintptr
+	nr         uintptr
 	a1, a2, a3 uintptr
 	// expected is the errno returned when seccomp ALLOWS this syscall.
 	// The invalid args we supply cause the kernel handler to fail with this
